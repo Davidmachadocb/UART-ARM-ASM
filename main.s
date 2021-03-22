@@ -1,18 +1,23 @@
 
 .data	
+
 .balign 1
-	user_input: .byte	1
+	user_input: .byte 1
 	buffer: .byte 1
 
 .balign 4
-	menu_str:     .asciz "------MENU------\n|1 - Executar  |\n|2 - Sair      |\n----------------\n"
-	.equ size_menu, 68
+	
+	file_txt:     .asciz "text_file.txt"
+	uart:     .asciz "UART.txt"
+			
+	menu_str:     .asciz "--------MENU--------\n|1 - txt para UART |\n|2 - Sair          |\n--------------------\n"
+	.equ size_menu, 84
 	exit_str:     .asciz  "\nFim do Programa.\n"
 	.equ size_exit, 18
 	error_str:    .asciz  "\nERROR.\n"
 	.equ size_error, 9
-	printf_str: .asciz "\033c"
-	
+	clear_str: .asciz "clear"
+
 .text
 
 .global main
@@ -42,8 +47,8 @@ loop_menu:
 		cmp r0, #0x32
 		beq exit
 		
-		ldr r0, =printf_str
-		bl printf
+		ldr r0, =clear_str
+		bl system
 		
 		mov r7, #4
 		mov r0, #1
@@ -54,7 +59,80 @@ loop_menu:
 		b loop_menu
 		
 	exec: 
-		b exit
+		@Leitura do arquivo de entrada input.txt
+		ldr r0, =file_txt
+		mov r7, #5 
+		mov r1, #0 @ passar zero para leitura
+		mov r2, #0
+		swi #0
+		
+		cmp r0, #-1
+		beq error
+
+		mov r4, r0
+		
+		@Leitura do arquivo de entrada output.txt
+		ldr r0, =uart
+		mov r7, #5
+		ldr r1, =#0x241 @ parametro para criar arquivo caso não exista e caso exista apagar o conteudo dele e escrever o que tem em input.txt
+		mov r2, #384
+		swi #0
+
+		cmp r0, #-1
+		beq error
+
+		mov r5, r0
+		mov r6, #0
+
+		loop1:
+			@passando parametros para realizar chamada do sistema
+			@e ler um byte do input.txt e salvar em buffer
+			mov r7, #0x03
+			mov r0, r4
+			ldr r1, =buffer
+			mov r2, #1
+			swi 0			
+			
+			@compara r0 com 0, por conta que se o r0 tiver o valor de 0
+			@foi por conta que o arquivo acabou, e se for zero o programa 
+			@pula para fim
+			cmp r0, #0
+			beq close_files1	
+		
+			
+			ldr r6, =buffer			
+			ldrb r6, [r6]
+	
+			loop2:
+				and r1, r6, #1
+				add r1, r1, #48		
+				
+				ldr r2, =buffer
+				strb r1, [r2]
+
+				mov r7, #4
+				mov r0, r5
+				ldr r1, =buffer
+				mov r2, #1
+				swi 0
+		
+				cmp r6, #0
+				beq loop1
+	
+				lsr r6, #1
+				b loop2
+	
+
+		
+		close_files1:
+			@fechar input
+			mov r0, r4
+			mov r7, #6
+			swi #0
+							
+			mov r0, r5
+			mov r7, #6
+			swi 0
 
 	exit:
 		mov r7, #4
