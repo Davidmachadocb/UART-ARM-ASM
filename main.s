@@ -5,13 +5,14 @@
 	user_input: .byte 1
 	buffer: .byte 1
 
+
 .balign 4
 	
 	file_txt:     .asciz "text_file.txt"
 	uart:     .asciz "UART.txt"
 			
-	menu_str:     .asciz "--------MENU--------\n|1 - txt para UART |\n|2 - Sair          |\n--------------------\n"
-	.equ size_menu, 84
+	menu_str:     .asciz "--------MENU--------\n|1 - txt para UART |\n|2 - UART para txt |\n|3 - Sair          |\n--------------------\nUser input: "
+	.equ size_menu, 117
 	exit_str:     .asciz  "\nFim do Programa.\n"
 	.equ size_exit, 18
 	error_str:    .asciz  "\nERROR.\n"
@@ -44,7 +45,7 @@ loop_menu:
 		cmp r0, #0x31
 		beq exec
 		
-		cmp r0, #0x32
+		cmp r0, #0x33
 		beq exit
 		
 		ldr r0, =clear_str
