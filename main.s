@@ -1,4 +1,21 @@
-
+@-----------------------Segmento de dados-------------------------@
+@ user_input: input do usuário para escolher menu inicial.        @
+@                                                                 @
+@ buffer: variavel para receber o char do arquivos ou escrever um @
+@         char em especifico.                                     @
+@                                                                 @
+@ menu_str: string que representa o menu.                         @
+@ size_menu: constante com o tamanho da string menu_str.          @
+@                                                                 @
+@ exit_str: string para indicar que o programa acabou.            @        
+@ size_exit: constante com tamanho da string exit_str.            @
+@                                                                 @
+@ error_str: string para indicar que houver error.                @
+@ size_error: tamanho da string de error.                         @
+@                                                                 @
+@ clear_str: string que contém a palavra clear que vai ser usado  @
+@            como argumento para a função system.                 @
+@-----------------------------------------------------------------@
 .data	
 
 .balign 1
@@ -29,25 +46,32 @@ main:
 loop_menu:	
 
 	menu:
+		
+		@ Imprimir o menu na tela por meio da chamada de sistema.
 		mov r7, #4
 		mov r0, #1
 		mov r2, #size_menu
 		ldr r1, =menu_str
 		swi #0
 		
+		@Receber o input do usuário atráves de uma chamada de sistema e 
+		@ salvar em user_input.
 		mov r7, #3
 		mov r0, #0
 		ldr r1, =user_input
 		mov r2, #2
 		swi 0
 
+		@Carregar o valor de user_input em r0 para fazer as comparações
+		@ com as opções do menu.
 		ldrb r0, [r1]
 		cmp r0, #0x31
-		beq exec
+		beq opt1
 		
 		cmp r0, #0x33
 		beq exit
 		
+		@Caso não tenha  
 		ldr r0, =clear_str
 		bl system
 		
@@ -59,7 +83,7 @@ loop_menu:
 		
 		b loop_menu
 		
-	exec: 
+	opt1: 
 		@Leitura do arquivo de entrada input.txt
 		ldr r0, =file_txt
 		mov r7, #5 
@@ -99,15 +123,29 @@ loop_menu:
 			@pula para fim
 			cmp r0, #0
 			beq close_files1	
-		
 			
 			ldr r6, =buffer			
 			ldrb r6, [r6]
+
+			mov r1, #48
+			ldr r2, =buffer
+			strb r1, [r2]
 	
+			mov r7, #4
+			mov r0, r5
+			ldr r1, =buffer
+			mov r2, #1
+			swi 0
+	
+			mov r3, #0
+			
 			loop2:
+				cmp r6, #0
+				beq zeros		
+		
 				and r1, r6, #1
 				add r1, r1, #48		
-				
+			
 				ldr r2, =buffer
 				strb r1, [r2]
 
@@ -116,13 +154,43 @@ loop_menu:
 				ldr r1, =buffer
 				mov r2, #1
 				swi 0
+			
+				add r3, r3, #1		
 		
-				cmp r6, #0
-				beq loop1
-	
 				lsr r6, #1
 				b loop2
-	
+
+
+			zeros:
+				cmp r3, #8
+				bge finished_loop2
+		
+				mov r1, #48
+				ldr r2, =buffer
+				strb r1, [r2]
+
+				mov r7, #4
+				mov r0, r5
+				ldr r1, =buffer
+				mov r2, #1
+				swi 0
+
+				add r3, r3, #1
+
+				b zeros
+
+			finished_loop2:
+				mov r1, #49
+				ldr r2, =buffer
+				strb r1, [r2]
+
+				mov r7, #4
+				mov r0, r5
+				ldr r1, =buffer
+				mov r2, #1
+				swi 0	
+
+				b loop1
 
 		
 		close_files1:
