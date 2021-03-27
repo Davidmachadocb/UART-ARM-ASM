@@ -25,8 +25,9 @@
 
 .balign 4
 	
-	file_txt:     .asciz "text_file.txt"
-	uart:     .asciz "UART.txt"
+	input_txt:  .asciz "text_input.txt"
+	uart:      .asciz "UART.txt"
+	output_txt:  .asciz "text_output.txt"
 			
 	menu_str:     .asciz "--------MENU--------\n|1 - txt para UART |\n|2 - UART para txt |\n|3 - Sair          |\n--------------------\nUser input: "
 	.equ size_menu, 117
@@ -90,7 +91,7 @@ loop_menu:
 		
 	opt1: 
 		@Leitura do arquivo de entrada input.txt
-		ldr r0, =file_txt
+		ldr r0, =input_txt
 		mov r7, #5 
 		mov r1, #0 @ passar zero para leitura
 		mov r2, #0
@@ -207,6 +208,37 @@ loop_menu:
 			mov r0, r5
 			mov r7, #6
 			swi 0
+
+
+	opt2: 
+		@Leitura do arquivo de entrada input.txt
+		ldr r0, =uart
+		mov r7, #5 
+		mov r1, #0 @ passar zero para leitura
+		mov r2, #0
+		swi #0
+		
+		cmp r0, #0
+		bmi error
+
+		mov r4, r0
+		
+		@Leitura do arquivo de entrada output.txt
+		ldr r0, =output_text
+		mov r7, #5
+		ldr r1, =#0x241 @ parametro para criar arquivo caso não exista e caso exista apagar o conteudo dele e escrever o que tem em input.txt
+		mov r2, #384
+		swi #0
+
+		cmp r0, #0
+		bmi error
+
+		mov r5, r0
+		mov r6, #0
+
+	
+
+
 
 	exit:
 		mov r7, #4
