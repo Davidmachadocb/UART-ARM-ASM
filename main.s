@@ -68,6 +68,11 @@ loop_menu:
 		cmp r0, #0x31
 		beq opt1
 		
+		@Carregar o valor de user_input em r0 para fazer as comparações
+		@ com as opções do menu.
+		cmp r0, #0x32
+		beq opt2
+				
 		cmp r0, #0x33
 		beq exit
 		
@@ -91,8 +96,8 @@ loop_menu:
 		mov r2, #0
 		swi #0
 		
-		cmp r0, #-1
-		beq error
+		cmp r0, #0
+		bmi error
 
 		mov r4, r0
 		
@@ -103,8 +108,8 @@ loop_menu:
 		mov r2, #384
 		swi #0
 
-		cmp r0, #-1
-		beq error
+		cmp r0, #0
+		bmi error
 
 		mov r5, r0
 		mov r6, #0
