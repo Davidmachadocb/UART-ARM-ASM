@@ -119,7 +119,7 @@ loop_menu:
 			bl _readByte
 
 			@ Verificando se leu algo.
-			cmp r0, #0								@ Verifica se ele leu algo.
+			cmp r0, #0
 			beq end
 
 		@ Convertendo valor lido.
@@ -154,7 +154,7 @@ loop_menu:
 			bl _readByte
 
 			@ Verificando se leu algo.
-			cmp r0, #0								@ Verifica se ele leu algo.
+			cmp r0, #0
 			beq end
 
 		@ Convertendo cadeira de bits em um valor ascii.
@@ -229,10 +229,10 @@ l1_uartAscii:
 	bl _readByte
 
 @ verifica se leu algo
+	cmp r0, #0
+	beq errorUart
 	ldr r1, =buffer
 	ldr r1, [r1]
-	cmp r0, #0								@ Verifica se ele leu algo.
-	beq errorUart
 
 @ valor do bufOut em r6
 	ldr r6, [r5]
@@ -285,7 +285,7 @@ _openIn:
 
 @----------------------------------------------------------------------------------------
 @ Atividade: Abre arquivo de saída apenas para leitura (flag 0x1 - O_WRONLY), truncando o seu tamanho para 0 (flag 0x200 - O_TRUNC).
-@ 	Se o arquivo output.txt não existir,então é criado outro (flag 0x40 - O_CREAT) com todas as permissões (0x1FF).
+@ 	Se o arquivo de saída não existir,então é criado outro (flag 0x40 - O_CREAT) com todas as permissões (0x1FF).
 @ Retorna fd do arquivo de saída em r0.
 _openOut:
 	push {lr}
@@ -350,7 +350,7 @@ _print:
 
 
 @----------------------------------------------------------------------------------------
-@ Atividade: Imprime mensagem de erro ao abrir o arquivo input.txt e finaliza a execução.
+@ Atividade: Imprime mensagem de erro ao abrir o arquivo entrada e finaliza a execução.
 errorOpen:
 	ldr r1, =error_str								@ Mensagem que será impressa.
 	mov r2, #size_error								@ 34 bytes serão impressos.
@@ -375,6 +375,5 @@ _exit:
 	swi #0
 	mov r7, #1
 	swi #0
-
 
 
