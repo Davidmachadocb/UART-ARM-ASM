@@ -19,8 +19,10 @@
 .data	
 
 .balign 1
-	user_input: .byte 1
-	buffer: .byte 1
+	user_input: 	.byte 1
+	buffer: 	.byte 0
+	bufOut:		.byte 0
+	control:	.byte 0
 
 
 .balign 4
@@ -28,9 +30,13 @@
 	input_txt:  .asciz "text_input.txt"
 	uart:      .asciz "UART.txt"
 	output_txt:  .asciz "text_output.txt"
+	InFileFd:        .skip 4
+	OutFileFd:        .skip 4
 			
 	menu_str:     .asciz "--------MENU--------\n|1 - txt para UART |\n|2 - UART para txt |\n|3 - Sair          |\n--------------------\nUser input: "
 	.equ size_menu, 117
+	errorUart_str:	.asciz 	"Houve um erro de ascii para uart. Bits incompletos."
+	.equ size_errorUart, 51
 	exit_str:     .asciz  "\nFim do Programa.\n"
 	.equ size_exit, 18
 	error_str:    .asciz  "\nERROR.\n"
@@ -90,161 +96,284 @@ loop_menu:
 		b loop_menu
 		
 	opt1: 
-		@Leitura do arquivo de entrada input.txt
+		@ Abrindo arquivo de entrada.
 		ldr r0, =input_txt
-		mov r7, #5 
-		mov r1, #0 @ passar zero para leitura
-		mov r2, #0
-		swi #0
-		
-		cmp r0, #0
-		bmi error
+		bl _openIn
+		cmp r0,#0								@ r0 menor do que 0 significa que houve um erro.
+		bmi errorOpen
 
-		mov r4, r0
-		
-		@Leitura do arquivo de entrada output.txt
+		@ Salvando fd do arquivo de entrada.
+		ldr r1, =InFileFd
+		str r0,[r1]
+
+		@ Abre/Cria arquivo de saída.
 		ldr r0, =uart
-		mov r7, #5
-		ldr r1, =#0x241 @ parametro para criar arquivo caso não exista e caso exista apagar o conteudo dele e escrever o que tem em input.txt
-		mov r2, #384
-		swi #0
+		bl _openOut
 
-		cmp r0, #0
-		bmi error
+		@ Salvando fd do arquivo de saída.
+		ldr r1, =OutFileFd
+		str r0,[r1]
 
-		mov r5, r0
-		mov r6, #0
+		@ Lendo valores do arquivo de entrada.
+		readValue_opt1:
+			bl _readByte
 
-		loop1:
-			@passando parametros para realizar chamada do sistema
-			@e ler um byte do input.txt e salvar em buffer
-			mov r7, #0x03
-			mov r0, r4
-			ldr r1, =buffer
-			mov r2, #1
-			swi 0			
-			
-			@compara r0 com 0, por conta que se o r0 tiver o valor de 0
-			@foi por conta que o arquivo acabou, e se for zero o programa 
-			@pula para fim
+			@ Verificando se leu algo.
 			cmp r0, #0
-			beq close_files1	
-			
-			ldr r6, =buffer			
-			ldrb r6, [r6]
+			beq end
 
-			mov r1, #48
-			ldr r2, =buffer
-			strb r1, [r2]
-	
-			mov r7, #4
-			mov r0, r5
-			ldr r1, =buffer
-			mov r2, #1
-			swi 0
-	
-			mov r3, #0
-			
-			loop2:
-				cmp r6, #0
-				beq zeros		
-		
-				and r1, r6, #1
-				add r1, r1, #48		
-			
-				ldr r2, =buffer
-				strb r1, [r2]
-
-				mov r7, #4
-				mov r0, r5
-				ldr r1, =buffer
-				mov r2, #1
-				swi 0
-			
-				add r3, r3, #1		
-		
-				lsr r6, #1
-				b loop2
-
-
-			zeros:
-				cmp r3, #8
-				bge finished_loop2
-		
-				mov r1, #48
-				ldr r2, =buffer
-				strb r1, [r2]
-
-				mov r7, #4
-				mov r0, r5
-				ldr r1, =buffer
-				mov r2, #1
-				swi 0
-
-				add r3, r3, #1
-
-				b zeros
-
-			finished_loop2:
-				mov r1, #49
-				ldr r2, =buffer
-				strb r1, [r2]
-
-				mov r7, #4
-				mov r0, r5
-				ldr r1, =buffer
-				mov r2, #1
-				swi 0	
-
-				b loop1
-
-		
-		close_files1:
-			@fechar input
-			mov r0, r4
-			mov r7, #6
-			swi #0
-							
-			mov r0, r5
-			mov r7, #6
-			swi 0
+		@ Convertendo valor lido.
+		txt_uart:
+			bl asciiUart
+			b readValue_opt1
 
 
 	opt2: 
-		@Leitura do arquivo de entrada input.txt
+		@ Abrindo arquivo de entrada.
 		ldr r0, =uart
-		mov r7, #5 
-		mov r1, #0 @ passar zero para leitura
-		mov r2, #0
-		swi #0
+		bl _openIn
+		cmp r0,#0							@ r0 menor do que 0 significa que houve um erro.
+		bmi errorOpen
+
+		@ Salvando fd do arquivo de entrada.
+		ldr r1, =InFileFd
+		str r0,[r1]
+
+		@ Abre/Cria arquivo de saída.
+		ldr r0, =output_txt
+		bl _openOut
+
+		@ Salvando fd do arquivo de saída.
+		ldr r1, =OutFileFd
+		str r0,[r1]
+
+		@ Lendo valores do arquivo de entrada.
+		readValue_opt2:
 		
-		cmp r0, #0
-		bmi error
+			@ ler o primeiro bit de controle
+			bl _readByte
 
-		mov r4, r0
-		
-		@Leitura do arquivo de entrada output.txt
-		ldr r0, =output_text
-		mov r7, #5
-		ldr r1, =#0x241 @ parametro para criar arquivo caso não exista e caso exista apagar o conteudo dele e escrever o que tem em input.txt
-		mov r2, #384
-		swi #0
+			@ Verificando se leu algo.
+			cmp r0, #0
+			beq end
 
-		cmp r0, #0
-		bmi error
-
-		mov r5, r0
-		mov r6, #0
-
-	
+		@ Convertendo cadeira de bits em um valor ascii.
+		uart_txt:
+			bl uartAscii
+			b readValue_opt2
 
 
+	end:
+		bl _close								@ Fecha todos os arquivos abertos.
+		b _exit
 
-	exit:
-		mov r7, #4
-		mov r0, #1
-		mov r2, #size_exit
-		ldr r1, =exit_str
-		swi #0
-		mov r7, #1
-		swi #0
+
+@>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+@========================================================================================
+@ascii->uart
+asciiUart:
+	push {lr}
+
+@START
+	mov r2, #0x30
+	bl bitControl
+	ldr r5, =buffer								@ De onde será retirado o byte escrito.
+	ldr r6, [r5]
+	mov r3, #8
+
+l1_asciiUart:
+	and r1, r6, #1
+	add r1, r1, #48
+
+	strb r1, [r5]
+	ldr r1, =buffer								@ De onde será retirado o byte escrito.	
+	bl _writeByte
+
+	lsr r6,#1
+	sub r3,r3,#1
+	cmp r3,#0
+	bgt l1_asciiUart
+
+end_l1_asciiUart:
+@END
+	mov r2, #0x31
+	bl bitControl
+	pop {pc}
+
+@========================================================================================
+bitControl:
+	push {lr}
+	ldr r4, =control
+	strb r2,[r4]
+
+writeControl:
+@ write in file:	
+	ldr r1, =control								@ Char impresso estará em control.
+	bl _writeByte	
+	pop {pc}
+
+@>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+@========================================================================================
+@uart->ascii
+uartAscii:
+	push {lr}
+
+@START
+	ldr r5, =bufOut								@ De onde será retirado o byte escrito.
+	mov r3, #0
+
+@ limpando assim o bufOut usado anteriormente
+	strb r3,[r5]
+
+l1_uartAscii:
+	bl _readByte
+
+@ verifica se leu algo
+	cmp r0, #0
+	beq errorUart
+	ldr r1, =buffer
+	ldr r1, [r1]
+
+@ valor do bufOut em r6
+	ldr r6, [r5]
+
+@ valor lido esta em r1
+	sub r1, r1, #0x30
+
+@ faz uma mascara para pegar apenas o bit menos significativo
+	and r1, r1, #0x1
+
+@ Passo: r6 = r6 + (r1 << r3)
+	add r6, r6, r1, LSL r3
+	strb r6, [r5]
+
+	add r3,r3,#1
+	cmp r3,#8
+	bmi l1_uartAscii
+
+end_l1_uartAscii:
+@ Parece que o valor em ascii já fica em bufOut por algum motivo kkkkk
+	ldr r1, [r5]
+	and r1, r1, #0xff
+	strb r1, [r5]
+
+@write ascii
+	mov r7, #4
+	ldr r0, =OutFileFd
+	ldr r0, [r0]								@ Valor de fd guardado em OutFileFd.
+	ldr r1, =bufOut								@ De onde será retirado o byte escrito.
+	mov r2, #1								@ Quantos bytes serão escritos.
+	swi #0
+
+@END
+	@ ler o segundo bit de controle
+	bl _readByte
+	pop {pc}
+
+@>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+@ Chamadas essenciais:
+@----------------------------------------------------------------------------------------
+@ Atividade: Abre arquivo de entrada apenas para leitura (flag 0x0 - O_RDONLY).
+@ Retorna: fd do arquivo de entrada em r0.
+_openIn:
+	push {lr}
+	mov r7, #5
+	mov r1, #0								@ flags: 0x0
+	mov r2, #0								@ permissões: 0x0
+	swi #0
+	pop {pc}
+
+@----------------------------------------------------------------------------------------
+@ Atividade: Abre arquivo de saída apenas para leitura (flag 0x1 - O_WRONLY), truncando o seu tamanho para 0 (flag 0x200 - O_TRUNC).
+@ 	Se o arquivo de saída não existir,então é criado outro (flag 0x40 - O_CREAT) com todas as permissões (0x1FF).
+@ Retorna fd do arquivo de saída em r0.
+_openOut:
+	push {lr}
+	mov r7, #5
+	ldr r1, =#0x241								@ flags: 0x200 or 0x40 or 0x1
+	ldr r2, =#0x1FF								@ permissões: FFF em octa
+	swi #0
+	pop {pc}
+
+@----------------------------------------------------------------------------------------
+@ Atividade: Fecha arquivos abertos.
+_close:
+	push {lr}
+
+@ Fechando arquivo de entrada.
+	mov r7, #6
+	ldr r0, =InFileFd
+	ldr r0, [r0]								@ Valor de fd guardado em InFileFd.
+	swi #0
+
+@ Fechando arquivo de saída.
+	mov r7, #6
+	ldr r0, =OutFileFd
+	ldr r0, [r0]								@ Valor de fd guardado em OutFileFd.
+	swi #0
+	pop {pc}
+
+@----------------------------------------------------------------------------------------
+@ Atividade: Ler apenas um byte de um arquivo.
+@ Retorna: A quantidade de Bytes lido. 0 significa que não leu nada.
+_readByte:
+	push {lr}
+	mov r7, #3
+	ldr r0, =InFileFd
+	ldr r0, [r0]								@ Valor de fd guardado em InFileFd.
+	ldr r1, =buffer								@ Aonde será colocado os bytes lidos.
+	mov r2, #1								@ Quantos bytes serão lidos.
+	swi #0
+	pop {pc}
+
+@----------------------------------------------------------------------------------------
+@ Atividade: Escreve apenas um byte no arquivo de saída.
+@ Retorna: A quantidade de Bytes escritos. 0 significa que não escreveu nada.
+_writeByte:
+	push {lr}
+	mov r7, #4
+	ldr r0, =OutFileFd
+	ldr r0, [r0]								@ Valor de fd guardado em OutFileFd.
+	mov r2, #1								@ Quantos bytes serão escritos.
+	swi #0
+	pop {pc}
+
+@----------------------------------------------------------------------------------------
+@ Atividade: Imprime algo no terminal.
+@ Observação: fd, mensagem e dado são colocados em seus respectivos registradores antes de chegar aqui.
+_print:
+	push {lr}
+	mov r7, #4
+	mov r0, #1								@ Imprimir no terminal (stdout)
+	swi #0
+	pop {pc}
+
+
+@----------------------------------------------------------------------------------------
+@ Atividade: Imprime mensagem de erro ao abrir o arquivo entrada e finaliza a execução.
+errorOpen:
+	ldr r1, =error_str								@ Mensagem que será impressa.
+	mov r2, #size_error								@ 34 bytes serão impressos.
+	bl _print
+	b _exit
+
+@----------------------------------------------------------------------------------------
+@ Atividade: Imprime mensagem de erro por ter menos bits do que 8 para compor o char de Uart para txt.
+errorUart:
+	ldr r1, =errorUart_str							@ Mensagem que será impressa.
+	mov r2, #size_errorUart								@ 34 bytes serão impressos.
+	bl _print
+	b _exit
+
+@----------------------------------------------------------------------------------------
+@ Atividade: Finaliza execução.
+_exit:
+	mov r7, #4
+	mov r0, #1
+	mov r2, #size_exit
+	ldr r1, =exit_str
+	swi #0
+	mov r7, #1
+	swi #0
+
+
