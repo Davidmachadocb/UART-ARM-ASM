@@ -41,6 +41,8 @@
 	.equ size_exit, 18
 	error_str:    .asciz  "\nERROR.\n"
 	.equ size_error, 9
+	inv_str:      .asciz "   Opção inválida\n"
+	.equ size_inv, 22
 	clear_str: .asciz "clear"
 
 .text
@@ -81,7 +83,7 @@ loop_menu:
 		beq opt2
 				
 		cmp r0, #0x33
-		beq exit
+		beq _exit
 		
 		@Caso não tenha  
 		ldr r0, =clear_str
@@ -89,8 +91,8 @@ loop_menu:
 		
 		mov r7, #4
 		mov r0, #1
-		mov r2, #size_error
-		ldr r1, =error_str
+		mov r2, #size_inv
+		ldr r1, =inv_str
 		swi #0
 		
 		b loop_menu
