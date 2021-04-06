@@ -124,7 +124,7 @@ loop_menu:
 
 		@ Convertendo valor lido.
 		txt_uart:
-			bl asciiUart
+			bl asciiUart                                 @vai concerter de ascii para uart
 			b readValue_opt1
 
 
@@ -172,45 +172,45 @@ loop_menu:
 @========================================================================================
 @ascii->uart
 asciiUart:
-	push {lr}
+	push {lr}								@ salva o contexto atual do código
 
 @START
-	mov r2, #0x30
+	mov r2, #0x30                                                           @ primeiro bit de controle '0'
 	bl bitControl
 	ldr r5, =buffer								@ De onde será retirado o byte escrito.
-	ldr r6, [r5]
-	mov r3, #8
+	ldr r6, [r5]                                                            @ carrega r5 em r6
+	mov r3, #8								@ contador de bits
 
 l1_asciiUart:
-	and r1, r6, #1
-	add r1, r1, #48
+	and r1, r6, #1                                                          @ r1 recebe o resultado de um and entre o bit menos significativo de r6 e 1
+	add r1, r1, #48								@ trasforma esse bit em char
 
-	strb r1, [r5]
+	strb r1, [r5]                                                                 
 	ldr r1, =buffer								@ De onde será retirado o byte escrito.	
-	bl _writeByte
+	bl _writeByte                                                           @ chama a label onde o bit será impresso
 
-	lsr r6,#1
-	sub r3,r3,#1
-	cmp r3,#0
+	lsr r6,#1                                                               @ faz um deslocamento pra direita em r6 pra pegar o próximo bit
+	sub r3,r3,#1								@ diminui r3 em 1, já que um bit foi impresso
+	cmp r3,#0								@ se r3 chegar em 0 o código continua pra imprimir o próximo bit de controle
 	bgt l1_asciiUart
 
 end_l1_asciiUart:
 @END
-	mov r2, #0x31
-	bl bitControl
-	pop {pc}
+	mov r2, #0x31								@ r2 recebe 1
+	bl bitControl								@ chama a label pra imprimir o bit de controle
+	pop {pc}								@ volta pra o início de asciiUart para pegar o próximo char
 
 @========================================================================================
 bitControl:
-	push {lr}
-	ldr r4, =control
+	push {lr}								@ salva o contexto
+	ldr r4, =control							@ coloca o bit de controle em control
 	strb r2,[r4]
 
 writeControl:
 @ write in file:	
 	ldr r1, =control								@ Char impresso estará em control.
-	bl _writeByte	
-	pop {pc}
+	bl _writeByte									@ chama a label onde o bit será impresso
+	pop {pc}									@ volta pro contexto anterior 
 
 @>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 @========================================================================================
