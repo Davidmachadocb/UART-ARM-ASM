@@ -177,7 +177,7 @@ asciiUart:
 	push {lr}								@ salva o contexto atual do código
 
 @START
-	mov r2, #0x0                                                           @ primeiro bit de controle '0'
+	mov r2, #0x0                                                           @ primeiro bit de controle 0
 	bl bitControl
 	ldr r5, =buffer								@ De onde será retirado o byte escrito.
 	ldr r6, [r5]                                                            @ carrega r5 em r6
@@ -185,7 +185,6 @@ asciiUart:
 
 l1_asciiUart:
 	and r1, r6, #1                                                          @ r1 recebe o resultado de um and entre o bit menos significativo de r6 e 1
-										@ trasforma esse bit em char
 
 	strb r1, [r5]                                                                 
 	ldr r1, =buffer								@ De onde será retirado o byte escrito.	
